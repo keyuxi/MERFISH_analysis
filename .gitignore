@@ -1,6 +1,7 @@
 # ignore all files...
 *.*
 # except
+!*.py
 !*.m
 !./README.md
 !/MERFISH_Examples2/MERFISH_Examples2/codebookMusmusculusHypothalamus_v01.csv

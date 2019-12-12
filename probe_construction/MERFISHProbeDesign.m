@@ -1277,6 +1277,7 @@ function MERFISHProbeDesign(varargin)
             PageBreak();
             display(['Writing: ' possibleOligosPath]);
             fprintf(logFID, '%s - Writing %s!\n', datestr(datetime), possibleOligosPath);
+            
             writeTimer = tic;
             fastawrite(possibleOligosPath, oligos);
             display(['... completed in ' num2str(toc(writeTimer))]);
@@ -1289,7 +1290,16 @@ function MERFISHProbeDesign(varargin)
                 PageBreak();
                 fprintf(1, 'Writing: %s\n', allOligosPath);
                 fprintf(logFID, '%s - Writing %s!\n', datestr(datetime), allOligosPath);
+                
+                %=====Remove empty rows from allOligos=====
+                indEmpty = find(cellfun(@isempty,{allOligos.Header}));
+                if ~isempty(indEmpty)
+                    allOligos(indEmpty(1):end) = [];
+                end
+                
                 writeTimer = tic;
+                disp(allHeaders);
+                disp(allSeqs);
                 fastawrite(allOligosPath, allOligos);
                 display(['... completed in ' num2str(toc(writeTimer))]);
                 fprintf(logFID, '%s - Completed in %d s\n', datestr(datetime), toc(writeTimer));

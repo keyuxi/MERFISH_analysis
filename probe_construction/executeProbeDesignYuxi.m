@@ -27,7 +27,7 @@ set(pd, 'rRNAtRNAPath', 'C:\Users\Yuxi\workspace\genomeDatahypothalamusLibrary\r
 set(pd, 'transcriptomePath', 'C:\Users\Yuxi\workspace\genomeDatahypothalamusLibrary\transcriptomeObj');
 set(pd, 'readoutPath', 'C:\Users\Yuxi\workspace\MERFISH_analysis\MERFISH_Examples2\readoutsHypothalamus.fasta');
 
-set(pd, 'regionGC', [0.43, 0.63], 'regionTm', [66,76], 'isoSpecificity', [0.75, 1], 'specificity', [0.75, 1]);
+set(pd, 'regionGC', [0.43, 0.63], 'regionTm', [66,76], 'isoSpecificity', [0, 1], 'specificity', [0.75, 1]);
 set(pd, 'FPKMabundanceThreshold', 0, 'numProbesPerGene', 92);
 set(pd, 'probeSpacing', -20, 'doubleHeadedsmELT', true);
 pd.buildLibrary();
