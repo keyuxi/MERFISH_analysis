@@ -287,8 +287,8 @@ class Codebook(object):
 
 if __name__ == "__main__":
     gene_list_file = r".\FISH_markers.txt"
-    out_file = r".\codebook_BLA.csv"
+    #out_file = r".\codebook_BLA.csv"
     bulk_seq_file = r".\E-MTAB-6798-query-results.tpms.tsv"
     codebook = Codebook(gene_list_file, "BLA", bulk_seq_file=bulk_seq_file)
 
-    codebook.generate(out_file)
+    codebook.generate()
