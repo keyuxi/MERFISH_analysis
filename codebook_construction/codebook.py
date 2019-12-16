@@ -15,12 +15,11 @@ import csv
 class Codebook(object):
     def __init__(self, gene_list_file, codebook_name='merfish', version='1.0',
                  readout_file=None, readout_offset=0,
-                 bulk_seq_file=None, bulk_seq_unit='fkpm',
+                 bulk_seq_file=None, bulk_seq_cutoff=500,
                  code_file=None, is_shuffle_code=True, verbose=True):
         
         # Read gene list
         self.gene_list = pd.read_csv(gene_list_file, header=0, sep='\t', encoding='utf-8')
-        self.gene_list['abundance'] = 1 # Arbitrary default
 
         self.codebook_name = codebook_name
         self.version = version
@@ -38,8 +37,8 @@ class Codebook(object):
         self.bit_names = self.bit_names[readout_offset:]
         
         # Abundance information to assign smELT
-        if not (bulk_seq_file == None):
-            self._get_abundance(bulk_seq_file, bulk_seq_unit)
+        self.bulk_seq_file = bulk_seq_file
+        self.bulk_seq_cutoff = bulk_seq_cutoff
             
         # Hamming code file
         # TODO: generate error correcting code
@@ -58,6 +57,11 @@ class Codebook(object):
         """
         self._get_ensembl_id()
         self._get_attributes()
+        if not (self.bulk_seq_file == None):
+            self._get_abundance()
+        else:
+            self.gene_list['abundance'] = 1 # Arbitrary default
+
         self._assign_smELT()
         codebook_df = self._assign_barcode()
         
@@ -151,13 +155,29 @@ class Codebook(object):
             self.gene_list.at[self.gene_list['ensembl_gene_id'] == row['Gene stable ID'],
                               'transcript_length'] = row.loc['Transcript length (including UTRs and CDS)']
 
-    def _get_abundance(self, abundance_file):
-        pass
-    
+    def _get_abundance(self):
+        """
+        Temporarily takes in a specified format. I/O hardcoded.
+        """
+        
+        # Warning: specific format
+        abundance = pd.read_csv(self.bulk_seq_file, header=4, sep='\t', encoding='utf-8')
+        abundance = abundance[['Gene ID', 'Gene Name', 'postnatal day 63, forebrain']]
+        abundance.columns = ['Gene ID', 'Gene Name', 'tpm']
+        
+        # Map to Ensembl gene ID, add to the attribute
+        self.gene_list['abundance'] = 0
+        for ind,row in self.gene_list.iterrows():
+            self.gene_list.at[ind, 'abundance'] = abundance[abundance['Gene ID'] == row['ensembl_gene_id']]['tpm'].values[0]
+        
     def _assign_smELT(self):
-        # create a new column by copying
+        # Create a new column by copying
         self.gene_list['is_smELT'] = self.gene_list['is_force_smELT']
-    
+        
+        # Assign genes that are expressed above a given value to smELT
+        self.gene_list.ix[self.gene_list['abundance'] >= self.bulk_seq_cutoff, 'is_smELT'] = 1
+        print(self.gene_list)
+        
     def _assign_barcode(self):
         """
         Assign Hamming code or sequential code. Add Blank codes. Sort genes.
@@ -266,8 +286,9 @@ class Codebook(object):
         return r
 
 if __name__ == "__main__":
-    gene_list_file = r"C:\Users\Yuxi\workspace\probedesign\gene_list\FISH_markers.txt"
+    gene_list_file = r".\FISH_markers.txt"
     out_file = r".\codebook_BLA.csv"
-    codebook = Codebook(gene_list_file, "BLA")
+    bulk_seq_file = r".\E-MTAB-6798-query-results.tpms.tsv"
+    codebook = Codebook(gene_list_file, "BLA", bulk_seq_file=bulk_seq_file)
 
     codebook.generate(out_file)
