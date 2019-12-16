@@ -9,25 +9,61 @@ import pybiomart as bm
 import pandas as pd
 import numpy as np
 import requests, sys
-from tqdm import tqdm
+import csv
+#from tqdm import tqdm
 
 class Codebook(object):
-    def __init__(self, gene_list_file, codebook_name='',
+    def __init__(self, gene_list_file, codebook_name='merfish', version='1.0',
                  readout_file=None, readout_offset=0,
                  bulk_seq_file=None, bulk_seq_unit='fkpm',
-                 code_file=None, shuffle_code=True, verbose=True):
+                 code_file=None, is_shuffle_code=True, verbose=True):
         
-        ### Read gene list ###
+        # Read gene list
         self.gene_list = pd.read_csv(gene_list_file, header=0, sep='\t', encoding='utf-8')
+        self.gene_list['abundance'] = 1 # Arbitrary default
 
+        self.codebook_name = codebook_name
+        self.version = version
+        
+        # Readout file to determine bit names
+        # TODO: generate bit names de novo
+        self.n_bit = 0
+        self.bit_names = []
         if readout_file == None:
-            self.readout_file = r"C:\Users\Yuxi\workspace\genomeData\CommonOligos"
+            readout_file = r".\ReadoutSeqs.fasta"
+        with open(readout_file, 'r') as infile:
+            for line in infile:
+                if line.strip().startswith('>'):
+                    self.bit_names.append(line.strip()[1:])
+        self.bit_names = self.bit_names[readout_offset:]
+        
+        # Abundance information to assign smELT
+        if not (bulk_seq_file == None):
+            self._get_abundance(bulk_seq_file, bulk_seq_unit)
+            
+        # Hamming code file
+        # TODO: generate error correcting code
+        if code_file == None:
+            self.code_file = \
+                r'.\16bit.mhd4.txt'
+        else:
+            self.code_file = code_file
+        self.is_shuffle_code = is_shuffle_code
+            
         self.verbose = verbose
     
     def generate(self, out_file=None):
-        pass
+        """
+        Call everything and write to out_file.
+        """
+        self._get_ensembl_id()
+        self._get_attributes()
+        self._assign_smELT()
+        codebook_df = self._assign_barcode()
+        
+        self._write_codebook_csv(codebook_df, out_file)
 
-    def get_ensembl_id(self):
+    def _get_ensembl_id(self):
         """
         Convert gene names to ensembl gene id using the REST API.
         TODO: Check gene lost.
@@ -56,11 +92,8 @@ class Codebook(object):
             
             # Write to the table
             self.gene_list.at[gene_ind, 'ensembl_gene_id'] = ensembl_id
-            if self.verbose:
-                print(self.gene_list.iloc[gene_ind])
-
     
-    def get_attributes(self, attributes=None,
+    def _get_attributes(self, attributes=None,
                        dataset_name='mmusculus_gene_ensembl'):
         """
         Get gene attributes and find principal transcripts.
@@ -72,14 +105,15 @@ class Codebook(object):
         
         # Set the attributes and filters for query.
         # Some temporary hard-coding here.
-        attr = ['mgi_symbol', 'ensembl_gene_id', 'ensembl_gene_id_version', \
-                'ensembl_transcript_id', 'ensembl_transcript_id_version', \
-                'transcript_appris', 'transcript_length', \
-                'gene_biotype', 'transcript_count']
+        if attributes == None:
+            attributes = ['mgi_symbol', 'ensembl_gene_id', 'ensembl_gene_id_version', \
+                          'ensembl_transcript_id', 'ensembl_transcript_id_version', \
+                          'transcript_appris', 'transcript_length', \
+                          'gene_biotype', 'transcript_count']
         filters = {'link_ensembl_gene_id': self.gene_list['ensembl_gene_id'].tolist()}
         
         # Retrieve information
-        query_result = dataset.query(attributes=attr, filters = filters)
+        query_result = dataset.query(attributes=attributes, filters = filters)
         
         #####################################################
         ##### Find the transcript to use for each gene. #####
@@ -101,13 +135,14 @@ class Codebook(object):
         
         # For protein coding genes, select the one with smallest APPRIS annotation
         prot_qr = query_result[query_result['Gene type'] == 'protein_coding']
-        prot_qr['appris_rank'] = prot_qr['APPRIS annotation'].apply(appris2rank)
+        prot_qr['appris_rank'] = prot_qr['APPRIS annotation'].apply(self._appris2rank)
         # lowest APPRIS rank
         prot_ind = prot_qr.groupby(['Gene stable ID'])['appris_rank'].idxmin()
         prot_qr = query_result.loc[prot_ind]
         # longest
         prot_ind = prot_qr.groupby(['Gene stable ID'])['Transcript length (including UTRs and CDS)'].idxmax()
         prot_qr = query_result.loc[prot_ind]
+        # Write the selected transcript
         for ind,row in prot_qr.iterrows():
             self.gene_list.at[self.gene_list['ensembl_gene_id'] == row['Gene stable ID'],
                               'ensembl_transcript_id_version'] = row.loc['Transcript stable ID version']
@@ -115,40 +150,124 @@ class Codebook(object):
                               'appris_rank'] = row.loc['APPRIS annotation']
             self.gene_list.at[self.gene_list['ensembl_gene_id'] == row['Gene stable ID'],
                               'transcript_length'] = row.loc['Transcript length (including UTRs and CDS)']
-        return self.gene_list
 
-    def get_abundance(self, abundance_file):
+    def _get_abundance(self, abundance_file):
         pass
     
-    def assign_smELT(self):
+    def _assign_smELT(self):
         # create a new column by copying
         self.gene_list['is_smELT'] = self.gene_list['is_force_smELT']
     
-    def assign_barcode(self):
-        pass
-    
-def appris2rank(anno):
-    """
-    Converts APPRIS annotation to a number for comparison.
-    Returns:
-        r - int.
-    """
-    if not isinstance(anno, str):
-        r = 99
-    elif 'principal' in anno:
-        r = int(anno[-1])
-    elif 'alternative' in anno:
-        r = int(anno[-1]) + 9
-    else:
-        r = 99
-    return r
+    def _assign_barcode(self):
+        """
+        Assign Hamming code or sequential code. Add Blank codes. Sort genes.
+        Returns:
+            out_list - a dataframe with gene symbols, transcript_id and barcode
+        """
+        #####################################################
+        ############# Prepare Hamming codebook ##############
+        #####################################################
+
+        hamming_code = pd.read_csv(self.code_file, sep='\t',
+                                    header=None, index_col=False)
+        # Shuffle
+        if self.is_shuffle_code:
+            np.random.seed(2)
+            hamming_code = hamming_code.sample(frac=1).reset_index(drop=True)
+        
+        # Convert to a list
+        hamming_code = hamming_code.values.squeeze().tolist()
+        self.n_bit = len(hamming_code[0].replace(' ',''))
+        
+        #####################################################
+        ##### Generate sorted gene list for the codebook ####
+        #####################################################
+        
+        # Barcoded genes
+        # Sort gene names alphabetically to dataframe out_list
+        barcoded_list = self.gene_list[self.gene_list['is_smELT'] == 0].sort_values('mgi_symbol') \
+                        [['mgi_symbol','ensembl_transcript_id_version']]
+        # Check gene number
+        n_barcoded_gene = len(barcoded_list)
+        print('\nNumber of barcoded genes: %s.\n' % n_barcoded_gene)
+        if n_barcoded_gene > 140:
+            print('Too many barcoded genes!')
+        # Blank barcode names
+        blank_name = [('Blank-%d' % (i+1)) for i in range(len(hamming_code) - n_barcoded_gene)]
+        blank_id = ['' for i in range(len(hamming_code) - n_barcoded_gene)]
+        
+        # smELT
+        smelt_list = self.gene_list[self.gene_list['is_smELT'] == 1].sort_values('mgi_symbol') \
+                     [['mgi_symbol','ensembl_transcript_id_version']]
+        n_smelt_gene = len(smelt_list)
+        
+        # Concatenate
+        list_data = {'mgi_symbol':
+                barcoded_list['mgi_symbol'].tolist() + blank_name + smelt_list['mgi_symbol'].tolist(),
+                'ensembl_transcript_id_version':
+                barcoded_list['ensembl_transcript_id_version'].tolist() + blank_id + smelt_list['ensembl_transcript_id_version'].tolist()}
+        out_list = pd.DataFrame(data = list_data)
+        
+        #####################################################
+        ################# Assign all barcodes ###############
+        #####################################################
+        # Assembly barcode - a list
+        smelt_code = np.eye(n_smelt_gene,dtype=int).astype(str).tolist()
+        smelt_code = [''.join(row) for row in smelt_code]
+        barcode = [(row.replace(' ', '') + n_smelt_gene * '0') for row in hamming_code] \
+                  + [(self.n_bit * '0' + row) for row in smelt_code]
+                  
+        # Truncate bit_names to the proper length
+        self.bit_names = self.bit_names[:len(barcode[0])]
+        
+        # Add barcode to out_list
+        out_list['barcode'] = barcode
+        
+        # Rename columns to match the final format
+        out_list.columns = ['name', 'id', 'barcode']
+
+        return out_list
+        
+    def _write_codebook_csv(self, codebook_df, out_file):
+        # Default out_file name
+        if out_file == None:
+            out_file = r'.\codebook_Musmusculus_' + self.codebook_name + '_v' \
+                       + self.version + '.csv'
+        
+        # Write
+        with open(out_file, 'w', newline='') as cb_file:
+            cb_writer = csv.writer(cb_file, delimiter=',')
+            cb_writer.writerow(['version', self.version])
+            cb_writer.writerow(['codebook_name', self.codebook_name])
+            cb_writer.writerow(['bit_names'] + self.bit_names)
+            cb_writer.writerow(['name', 'id', 'barcode'])
+            for _,row in codebook_df.iterrows():
+                cb_writer.writerow(row.tolist())
+                
+        if self.verbose:
+            print('\nFinished writing codebook to %s.\n' % out_file)
+        
+    def _appris2rank(self, anno):
+        """
+        Helper function that converts APPRIS annotation to a number for comparison.
+        The smaller, the better.
+        e.g. 'principal1' -> 1, 'alternative2' -> 11
+        Returns:
+            r - int.
+        """
+        if not isinstance(anno, str):
+            r = int(99)
+        elif 'principal' in anno:
+            r = int(anno[-1])
+        elif 'alternative' in anno:
+            r = int(anno[-1]) + 9
+        else:
+            r = int(99)
+        return r
 
 if __name__ == "__main__":
     gene_list_file = r"C:\Users\Yuxi\workspace\probedesign\gene_list\FISH_markers.txt"
-    # readout_file = r"C:\Users\Yuxi\workspace\genomeData\CommonOligos\ReadoutSeqs.fasta"
-    out_file = r"C:\Users\Yuxi\workspace\probedesign\gene_list\codebook_BLA.csv"
+    out_file = r".\codebook_BLA.csv"
     codebook = Codebook(gene_list_file, "BLA")
-    codebook.get_ensembl_id()
-    query_result = codebook.get_attributes()
-    print(query_result)
-    #codebook.generate(out_file)
+
+    codebook.generate(out_file)
