@@ -10,7 +10,6 @@ import pandas as pd
 import numpy as np
 import requests, sys
 import csv
-#from tqdm import tqdm
 
 class Codebook(object):
     def __init__(self, gene_list_file, codebook_name='merfish', version='1.0',
@@ -289,6 +288,6 @@ if __name__ == "__main__":
     gene_list_file = r".\FISH_markers.txt"
     #out_file = r".\codebook_BLA.csv"
     bulk_seq_file = r".\E-MTAB-6798-query-results.tpms.tsv"
-    codebook = Codebook(gene_list_file, "BLA", bulk_seq_file=bulk_seq_file)
+    codebook = Codebook(gene_list_file, "BLA", bulk_seq_file=bulk_seq_file, version='2.0')
 
     codebook.generate()

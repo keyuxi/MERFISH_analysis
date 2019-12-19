@@ -225,6 +225,12 @@ function MERFISHProbeDesign(varargin)
         
         doubleHeadedsmELT = obj.doubleHeadedsmELT;
         
+        % This option pads all oligos to the same length for better chip
+        % synthesis result.
+        if isprop(obj, tripleHeadedsmELT)
+           tripleHeadedsmELT = obj.tripleHeadedsmELT; 
+        end
+        
         keepAllPossibleProbes = obj.keepAllPossibleProbes;
         
     else
@@ -1147,8 +1153,8 @@ function MERFISHProbeDesign(varargin)
                                         localReadouts(3).Header];
 
                                     % Create sequence
-                                    seqs{p} = ['A ' seqrcomplement(localReadouts(1).Sequence) ' ' ...
-                                        seqrcomplement(localReadouts(2).Sequence) ' ' ...
+                                    seqs{p} = [' ' seqrcomplement(localReadouts(1).Sequence) ' ' ...
+                                        seqrcomplement(localReadouts(2).Sequence) ' A ' ...
                                         seqrcomplement(tRegion.sequence{nR}) ' A ' ...
                                            seqrcomplement(localReadouts(3).Sequence)];
                                 end
@@ -1186,60 +1192,66 @@ function MERFISHProbeDesign(varargin)
                         display(['... keeping ' num2str(length(indsToKeepForReal)) ' probes']);
                         fprintf(logFID, '%s - Retaining %d probes\n', datestr(datetime), length(indsToKeepForReal));
 
-                        % Check on number
-                        if length(indsToKeepForReal) < numProbesPerGene
-                            warning(' ');
-                            display(['Not enough probes for ' num2str(i) ': ' tRegion.geneName]);
-                            fprintf(logFID, '%s - Not enough probes for %s!\n', datestr(datetime), tRegion.geneName);
+                        % If tripleHeadedsmELT, add to 5 components
+                        % regardless of the number of probes. If
+                        % doubleHeadedsmELT, only add to those with low
+                        % probe per gene for backward compatibility.
+                        if tripleHeadedsmELT
+                            fprintf(logFID, '%s - Adding second and third readout to each probe for gene %s!\n', datestr(datetime), tRegion.geneName);
                             
-                            % If doubleHeadedsmELT flag set and there
-                            % aren't enough probes to satisfy
-                            % numProbesPerGene for this transcript, 
-                            % append second readout sequence of same
-                            % type to all probes on this gene
-                            if doubleHeadedsmELT 
-                                fprintf(logFID, '%s - Adding second readout to each probe for gene %s!\n', datestr(datetime), tRegion.geneName);
-                                
-%                                 assignin('base', 'headers', headers);
-%                                 assignin('base', 'seqs', seqs);
-%                                 assignin('base', 'indsToKeepForReal', indsToKeepForReal);
-%                                 
-                                for revInds = indsToKeepForReal
-                                    
-                                    headerLengthCorrectForsmELT = false;
-                                    % Update header
-                                    currHeader = headers{revInds};
-                                    currHeadSplit = strsplit(currHeader, ' ');
-                                    currHeadSplit(cell2mat(cellfun(@isempty, currHeadSplit, 'UniformOutput', false))) = [];
-                                    % Only apply doubleHeaded to smELT
-                                    % probes.  These have header form
-                                    % libraryName Readout Gene_ID_XX__XX__XX
-                                    % Append another Readout to end
-                                    if length(currHeadSplit) == 3 % is right length for smELT (MERFISH has 5 components)
-                                        headerLengthCorrectForsmELT = true;
-                                        currHeadSplit{end+1} = currHeadSplit{2};
+                        else
+                            % Check on number
+                            if length(indsToKeepForReal) < numProbesPerGene
+                                warning(' ');
+                                display(['Not enough probes for ' num2str(i) ': ' tRegion.geneName]);
+                                fprintf(logFID, '%s - Not enough probes for %s!\n', datestr(datetime), tRegion.geneName);
+
+                                % If doubleHeadedsmELT flag set and there
+                                % aren't enough probes to satisfy
+                                % numProbesPerGene for this transcript, 
+                                % append second readout sequence of same
+                                % type to all probes on this gene
+                                if doubleHeadedsmELT 
+                                    fprintf(logFID, '%s - Adding second readout to each probe for gene %s!\n', datestr(datetime), tRegion.geneName);
+
+    %                                 assignin('base', 'headers', headers);
+    %                                 assignin('base', 'seqs', seqs);
+    %                                 assignin('base', 'indsToKeepForReal', indsToKeepForReal);
+    %                                 
+                                    for revInds = indsToKeepForReal
+
+                                        headerLengthCorrectForsmELT = false;
+                                        % Update header
+                                        currHeader = headers{revInds};
+                                        currHeadSplit = strsplit(currHeader, ' ');
+                                        currHeadSplit(cell2mat(cellfun(@isempty, currHeadSplit, 'UniformOutput', false))) = [];
+                                        % Only apply doubleHeaded to smELT
+                                        % probes.  These have header form
+                                        % libraryName Readout Gene_ID_XX__XX__XX
+                                        % Append another Readout to end
+                                        if length(currHeadSplit) == 3 % is right length for smELT (MERFISH has 5 components)
+                                            headerLengthCorrectForsmELT = true;
+                                            currHeadSplit{end+1} = currHeadSplit{2};
+                                        end
+                                        headers{revInds} = strjoin(currHeadSplit, ' ');
+
+                                        % Update sequence
+                                        currSeq = seqs{revInds};
+                                        % smELT probes have form
+                                        % A RdoutSeq GeneComplement A
+                                        % Append RdoutSeq to end again
+                                        currSeqSplit = strsplit(currSeq, ' ');
+                                        if headerLengthCorrectForsmELT
+                                            currSeqSplit{end + 1} = currSeqSplit{2};
+                                        end
+                                        seqs{revInds} = strjoin(currSeqSplit, ' ');
+
                                     end
-                                    headers{revInds} = strjoin(currHeadSplit, ' ');
-                                    
-                                    % Update sequence
-                                    currSeq = seqs{revInds};
-                                    % smELT probes have form
-                                    % A RdoutSeq GeneComplement A
-                                    % Append RdoutSeq to end again
-                                    currSeqSplit = strsplit(currSeq, ' ');
-                                    if headerLengthCorrectForsmELT
-                                        currSeqSplit{end + 1} = currSeqSplit{2};
-                                    end
-                                    seqs{revInds} = strjoin(currSeqSplit, ' ');
-                                    
+
+
+                                    possibleReadouts = [possibleReadouts, possibleReadouts];
                                 end
-                                
-                                
-                                possibleReadouts = [possibleReadouts, possibleReadouts];
                             end
-                            
-                            
-                            
                         end
 
 
@@ -1294,7 +1306,7 @@ function MERFISHProbeDesign(varargin)
                 %=====Remove empty rows from allOligos=====
                 indEmpty = find(cellfun(@isempty,{allOligos.Header}));
                 if ~isempty(indEmpty)
-                    allOligos(indEmpty(1):end) = [];
+                    allOligos(indEmpty) = [];
                 end
                 
                 writeTimer = tic;
