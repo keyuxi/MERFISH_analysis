@@ -285,10 +285,58 @@ class Codebook(object):
             r = int(99)
         return r
 
-if __name__ == "__main__":
-    gene_list_file = r".\FISH_markers.txt"
-    #out_file = r".\codebook_BLA.csv"
-    bulk_seq_file = r".\E-MTAB-6798-query-results.tpms.tsv"
-    codebook = Codebook(gene_list_file, "BLA", bulk_seq_file=bulk_seq_file)
+class Codebook2hot(Codebook):
+    def _assign_barcode(self):
+        """
+        Assign 2-hot barcodes neglecting is_smELT. Sort genes.
+        Returns:
+            out_list - a dataframe with gene symbols, transcript_id and barcode
+        """
+        
+        #####################################################
+        ##### Generate sorted gene list for the codebook ####
+        #####################################################
+        
+        # Barcoded genes
+        # Sort gene names alphabetically to dataframe out_list
+        out_list = self.gene_list.sort_values('mgi_symbol') \
+                        [['mgi_symbol','ensembl_transcript_id_version']]
+        # Check gene number
+        n_barcoded_gene = len(out_list)
+        print('\nNumber of barcoded genes: %s.\n' % n_barcoded_gene)
+        if n_barcoded_gene > 100:
+            print('Too many barcoded genes!')
+                
+        # Generate 2-hot code as np.array
+        barcode = np.zeros((n_barcoded_gene, 2*n_barcoded_gene), dtype=int)
+        for i in range(n_barcoded_gene):
+            barcode[i, 2*i:2*i+2] = 1
+        # Assembly barcode - a list
+        barcode = barcode.astype(str).tolist()
+        barcode = [''.join(row) for row in barcode]
 
+        #####################################################
+        ################# Assign all barcodes ###############
+        #####################################################
+                  
+        # Truncate bit_names to the proper length
+        self.bit_names = self.bit_names[:len(barcode[0])]
+        
+        # Add barcode to out_list
+        out_list['barcode'] = barcode
+        
+        # Rename columns to match the final format
+        out_list.columns = ['name', 'id', 'barcode']
+
+        return out_list
+
+
+if __name__ == "__main__":
+#    gene_list_file = r".\lib01_merfish.txt"
+#    #out_file = r".\codebook_BLA.csv"
+#    bulk_seq_file = r".\E-MTAB-6798-query-results.tpms.tsv"
+#    codebook = Codebook(gene_list_file, "BLA", bulk_seq_file=bulk_seq_file)
+
+    gene_list_file = r".\lib01_2hot.txt"
+    codebook = Codebook2hot(gene_list_file, "lib01_2hot", readout_offset=2)
     codebook.generate()
