@@ -7,3 +7,12 @@
 !/MERFISH_Examples2/MERFISH_Examples2/codebookMusmusculusHypothalamus_v01.csv
 !/MERFISH_Examples2/readoutsHypothalamus.fasta
 !/MERFISH_Examples2/Mus_musculus_proxy.fpkm_tracking
+# Schnitzer Lab
+## templates
+!/codebook_construction/README.md
+!/codebook_construction/16bit.mhd4.txt
+!/codebook_construction/AllBarcodes.fasta
+!/codebook_construction/FwdPrimers.fasta
+!/codebook_construction/RevPrimers.fasta
+!/codebook_construction/RevPrimersT7.fasta
+!/codebook_construction/E-MTAB-6798-query-results.tpms.tsv

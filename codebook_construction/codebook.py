@@ -29,7 +29,7 @@ class Codebook(object):
         self.n_bit = 0
         self.bit_names = []
         if readout_file == None:
-            readout_file = r".\ReadoutSeqs.fasta"
+            readout_file = r".\AllBarcodes.fasta"
         with open(readout_file, 'r') as infile:
             for line in infile:
                 if line.strip().startswith('>'):
@@ -332,11 +332,11 @@ class Codebook2hot(Codebook):
 
 
 if __name__ == "__main__":
-#    gene_list_file = r".\lib01_merfish.txt"
-#    #out_file = r".\codebook_BLA.csv"
-#    bulk_seq_file = r".\E-MTAB-6798-query-results.tpms.tsv"
-#    codebook = Codebook(gene_list_file, "BLA", bulk_seq_file=bulk_seq_file)
+    gene_list_file = r".\lib01_merfish.txt"
+    bulk_seq_file = r".\E-MTAB-6798-query-results.tpms.tsv"
+    codebook_merfish = Codebook(gene_list_file, "lib01_merfish", bulk_seq_file=bulk_seq_file)
+    codebook_merfish.generate()
 
     gene_list_file = r".\lib01_2hot.txt"
-    codebook = Codebook2hot(gene_list_file, "lib01_2hot", readout_offset=2)
-    codebook.generate()
+    codebook_2hot = Codebook2hot(gene_list_file, "lib01_2hot", readout_offset=16)
+    codebook_2hot.generate()
