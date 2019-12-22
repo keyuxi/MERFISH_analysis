@@ -13,7 +13,7 @@ import csv
 
 class Codebook(object):
     def __init__(self, gene_list_file, codebook_name='merfish', version='1.0',
-                 readout_file=None, readout_offset=0,
+                 readout_file=r".\AllReadouts.fasta", readout_offset=0,
                  bulk_seq_file=None, bulk_seq_cutoff=500,
                  code_file=None, is_shuffle_code=True, verbose=True):
         
@@ -24,11 +24,9 @@ class Codebook(object):
         self.version = version
         
         # Readout file to determine bit names
-        # TODO: generate bit names de novo
         self.n_bit = 0
         self.bit_names = []
-        if readout_file == None:
-            readout_file = r".\AllBarcodes.fasta"
+
         with open(readout_file, 'r') as infile:
             for line in infile:
                 if line.strip().startswith('>'):
@@ -40,7 +38,6 @@ class Codebook(object):
         self.bulk_seq_cutoff = bulk_seq_cutoff
             
         # Hamming code file
-        # TODO: generate error correcting code
         if code_file == None:
             self.code_file = \
                 r'.\16bit.mhd4.txt'
@@ -79,6 +76,10 @@ class Codebook(object):
 
         # Loop over each gene
         for gene_ind, gene_symbol in enumerate(self.gene_list['mgi_symbol'].tolist()):
+            
+            ensembl_id = None
+            
+            # Request by gene symbol
             ext = "/xrefs/symbol/mus_musculus/" + gene_symbol.upper() \
                     + "?object_type=gene"
             r = requests.get(server+ext, headers={ "Content-Type" : "application/json"})
@@ -86,15 +87,44 @@ class Codebook(object):
             if not r.ok:
                 r.raise_for_status()
                 sys.exit()
-               
-            # A dictionary of the result
+            
             if self.verbose:
                 print("\n===Ensembl ID query results for %s===\n" % gene_symbol)
-                print(r.json()[0])
-            ensembl_id = r.json()[0]['id']
-            
-            # Write to the table
-            self.gene_list.at[gene_ind, 'ensembl_gene_id'] = ensembl_id
+
+            # Check gene name backwards to prevent hitting other genes with 
+            # same acronyms
+            for result in r.json():
+                # Request by gene stable id
+                ext = "/xrefs/id/" + result['id'] + "?"
+ 
+                r_id = requests.get(server+ext, headers={ "Content-Type" : "application/json"})
+                 
+                if not r_id.ok:
+                  r_id.raise_for_status()
+                  sys.exit()
+                
+                # Grab MGI symbol
+                for seg in r_id.json():
+                    if seg['dbname'] == 'MGI':
+                        this_gene_symbol = seg['display_id']
+                        break
+                    
+                if self.verbose:
+                    print(result)
+                    print(this_gene_symbol)
+                    
+                # If the ID corresponds to the correct MGI symbol
+                if gene_symbol == this_gene_symbol:
+                    ensembl_id = result['id']
+                    break
+                
+            # If failed to find matching ID
+            if ensembl_id == None:
+                print('\n%s\nFailed to find ID for %s, check MGI symbol spelling!\n'
+                      % (30*'!', gene_symbol))
+            else:    
+                # Write this id to the table
+                self.gene_list.at[gene_ind, 'ensembl_gene_id'] = ensembl_id
     
     def _get_attributes(self, attributes=None,
                        dataset_name='mmusculus_gene_ensembl'):
@@ -171,11 +201,12 @@ class Codebook(object):
         
     def _assign_smELT(self):
         # Create a new column by copying
-        self.gene_list['is_smELT'] = self.gene_list['is_force_smELT']
+        is_smELT = self.gene_list['is_force_smELT']
         
         # Assign genes that are expressed above a given value to smELT
-        self.gene_list.ix[self.gene_list['abundance'] >= self.bulk_seq_cutoff, 'is_smELT'] = 1
-        print(self.gene_list)
+        is_smELT[self.gene_list['abundance'] >= self.bulk_seq_cutoff] = 1
+        self.gene_list['is_smELT'] = is_smELT
+        print(self.gene_list[['mgi_symbol', 'ensembl_gene_id', 'abundance', 'is_smELT']])
         
     def _assign_barcode(self):
         """
@@ -333,9 +364,9 @@ class Codebook2hot(Codebook):
 if __name__ == "__main__":
     gene_list_file = r".\lib01_merfish.txt"
     bulk_seq_file = r".\E-MTAB-6798-query-results.tpms.tsv"
-    codebook_merfish = Codebook(gene_list_file, "lib01_merfish", bulk_seq_file=bulk_seq_file)
+    codebook_merfish = Codebook(gene_list_file, "lib01_merfish", bulk_seq_file=bulk_seq_file, verbose=False)
     codebook_merfish.generate()
 
     gene_list_file = r".\lib01_2hot.txt"
-    codebook_2hot = Codebook2hot(gene_list_file, "lib01_2hot", readout_offset=25)
+    codebook_2hot = Codebook2hot(gene_list_file, "lib01_2hot", readout_offset=25, verbose=False)
     codebook_2hot.generate()

@@ -1,4 +1,5 @@
 % probeDesign class for MERFISHProbeDesign.m input
+% Additional modifications by YK, Schnitzer Lab, Stanford, 2019
 
 classdef probeDesign < matlab.mixin.SetGet
     
@@ -41,7 +42,14 @@ classdef probeDesign < matlab.mixin.SetGet
 
         numProbesPerGene {mustBeNumeric, mustBeNonnegative} = 48;
 
+        % Allow predesigned primers from file
+        isPredesignedPrimer logical = false;
+        primerID = [1 1];
+        fwdPrimerPath char = 'C:\Users\Yuxi\workspace\MERFISH_analysis\codebook_construction\FwdPrimers.fasta';
+        revPrimerPath char = 'C:\Users\Yuxi\workspace\MERFISH_analysis\codebook_construction\RevPrimers.fasta';
+        revT7PrimerPath char = 'C:\Users\Yuxi\workspace\MERFISH_analysis\codebook_construction\RevPrimersT7.fasta';
 
+        % If design primers de novo
         nPrimersToGenerate {mustBeNumeric, mustBeNonnegative} = 1e3;
         primerLength {mustBeNumeric, mustBeNonnegative} = 20;
         primerMonovalentSaltConcentration{mustBeNumeric, mustBeNonnegative} = 0.3;
@@ -53,6 +61,10 @@ classdef probeDesign < matlab.mixin.SetGet
 
         % Indicate if this is allowed to ignore sequence version number in matching
         versionMatch {mustBeNumericOrLogical} = false;
+        
+        % Overrides doubleHeadedsmELT. Attach 3 readouts to each probe to
+        % make all oligos in the library the same length.
+        tripleHeadedsmELT {mustBeNumericOrLogical} = false;
         
         doubleHeadedsmELT {mustBeNumericOrLogical} = false;
         
@@ -174,6 +186,10 @@ classdef probeDesign < matlab.mixin.SetGet
                           'monovalentSaltConcentration', ...
                           'probeConcentration', ...
                           'probeSpacing',...
+                          'isPredesignPrimer',...
+                          'fwdPrimerPath',...
+                          'revPrimerPath',...
+                          'revT7PrimerPath',...
                           'numProbesPerGene', ...
                           'nPrimersToGenerate', ...
                           'primerLength', ...

@@ -9,6 +9,7 @@ function MERFISHProbeDesign(varargin)
     % -------------------------------------------------------------------------
     % Copyright Presidents and Fellows of Harvard College, 2016.
     % Additional modifications by PRN, AIBS, 2019
+    % Additional modifications by YK, Schnitzer Lab, Stanford, 2019
     %% ------------------------------------------------------------------------
     % Setup the workspace
     %%-------------------------------------------------------------------------
@@ -210,6 +211,16 @@ function MERFISHProbeDesign(varargin)
 
         numProbesPerGene = obj.numProbesPerGene;
 
+        try
+            isPredesignedPrimer = obj.isPredesignedPrimer;
+            primerID = obj.primerID;
+            fwdPrimerPath = obj.fwdPrimerPath;
+            revPrimerPath = obj.revPrimerPath;
+            revT7PrimerPath = obj.revT7PrimerPath;
+        catch
+            fprintf('\nNo predesigned primer attribute!\n');
+            isPredesignedPrimer = false;
+        end
 
         primerDesignParameters.nPrimersToGenerate = obj.nPrimersToGenerate;
         primerDesignParameters.primerLength = obj.primerLength;
@@ -227,8 +238,13 @@ function MERFISHProbeDesign(varargin)
         
         % This option pads all oligos to the same length for better chip
         % synthesis result.
-        if isprop(obj, tripleHeadedsmELT)
+        if isprop(obj, 'tripleHeadedsmELT')
            tripleHeadedsmELT = obj.tripleHeadedsmELT; 
+           if tripleHeadedsmELT
+              doubleHeadedsmELT = false; 
+           end
+        else
+            tripleHeadedsmELT = false;
         end
         
         keepAllPossibleProbes = obj.keepAllPossibleProbes;
@@ -1100,18 +1116,30 @@ function MERFISHProbeDesign(varargin)
                                 % smELT localReadouts enforcement
                                 if sum(barcodes(i,:)) == 1
                                     localReadouts(1) = possibleReadouts;
-                                    localReadouts(2).Header = '';
-                                    localReadouts(2).Sequence = '';
-                                    localReadouts(3).Header = '';
-                                    localReadouts(3).Sequence = '';
+                                    
+                                    if tripleHeadedsmELT
+                                        localReadouts(2) = possibleReadouts;
+                                        localReadouts(3) = possibleReadouts;
+                                    else
+                                        localReadouts(2).Header = '';
+                                        localReadouts(2).Sequence = '';
+                                        localReadouts(3).Header = '';
+                                        localReadouts(3).Sequence = '';
+                                    end
 
                                 % 2-hot readout testing, smELT style
                                 elseif (sum(barcodes(i, :)) == 2) 
-                                    localReadouts(1) = possibleReadouts(1);
-                                    localReadouts(2).Header = '';
-                                    localReadouts(2).Sequence = ''; 
-                                    localReadouts(3) = possibleReadouts(2);
                                     
+                                    if tripleHeadedsmELT
+                                        localReadouts = possibleReadouts(randi(2,[1 3]));
+                                    else
+                                        localReadouts(1) = possibleReadouts(1);
+                                        localReadouts(2).Header = '';
+                                        localReadouts(2).Sequence = ''; 
+                                        localReadouts(3) = possibleReadouts(2);
+                                    end
+                                
+                                % MERFISH readout    
                                 else
                                     % Create random orientation and selection of readouts
                                     localReadouts = possibleReadouts(randperm(length(possibleReadouts), 3));
@@ -1192,65 +1220,56 @@ function MERFISHProbeDesign(varargin)
                         display(['... keeping ' num2str(length(indsToKeepForReal)) ' probes']);
                         fprintf(logFID, '%s - Retaining %d probes\n', datestr(datetime), length(indsToKeepForReal));
 
-                        % If tripleHeadedsmELT, add to 5 components
-                        % regardless of the number of probes. If
-                        % doubleHeadedsmELT, only add to those with low
-                        % probe per gene for backward compatibility.
-                        if tripleHeadedsmELT
-                            fprintf(logFID, '%s - Adding second and third readout to each probe for gene %s!\n', datestr(datetime), tRegion.geneName);
-                            
-                        else
-                            % Check on number
-                            if length(indsToKeepForReal) < numProbesPerGene
-                                warning(' ');
-                                display(['Not enough probes for ' num2str(i) ': ' tRegion.geneName]);
-                                fprintf(logFID, '%s - Not enough probes for %s!\n', datestr(datetime), tRegion.geneName);
+                        % Check on number
+                        if length(indsToKeepForReal) < numProbesPerGene
+                            warning(' ');
+                            display(['Not enough probes for ' num2str(i) ': ' tRegion.geneName]);
+                            fprintf(logFID, '%s - Not enough probes for %s!\n', datestr(datetime), tRegion.geneName);
 
-                                % If doubleHeadedsmELT flag set and there
-                                % aren't enough probes to satisfy
-                                % numProbesPerGene for this transcript, 
-                                % append second readout sequence of same
-                                % type to all probes on this gene
-                                if doubleHeadedsmELT 
-                                    fprintf(logFID, '%s - Adding second readout to each probe for gene %s!\n', datestr(datetime), tRegion.geneName);
+                            % If doubleHeadedsmELT flag set and there
+                            % aren't enough probes to satisfy
+                            % numProbesPerGene for this transcript, 
+                            % append second readout sequence of same
+                            % type to all probes on this gene
+                            if doubleHeadedsmELT 
+                                fprintf(logFID, '%s - Adding second readout to each probe for gene %s!\n', datestr(datetime), tRegion.geneName);
 
-    %                                 assignin('base', 'headers', headers);
-    %                                 assignin('base', 'seqs', seqs);
-    %                                 assignin('base', 'indsToKeepForReal', indsToKeepForReal);
-    %                                 
-                                    for revInds = indsToKeepForReal
+%                                 assignin('base', 'headers', headers);
+%                                 assignin('base', 'seqs', seqs);
+%                                 assignin('base', 'indsToKeepForReal', indsToKeepForReal);
+%                                 
+                                for revInds = indsToKeepForReal
 
-                                        headerLengthCorrectForsmELT = false;
-                                        % Update header
-                                        currHeader = headers{revInds};
-                                        currHeadSplit = strsplit(currHeader, ' ');
-                                        currHeadSplit(cell2mat(cellfun(@isempty, currHeadSplit, 'UniformOutput', false))) = [];
-                                        % Only apply doubleHeaded to smELT
-                                        % probes.  These have header form
-                                        % libraryName Readout Gene_ID_XX__XX__XX
-                                        % Append another Readout to end
-                                        if length(currHeadSplit) == 3 % is right length for smELT (MERFISH has 5 components)
-                                            headerLengthCorrectForsmELT = true;
-                                            currHeadSplit{end+1} = currHeadSplit{2};
-                                        end
-                                        headers{revInds} = strjoin(currHeadSplit, ' ');
-
-                                        % Update sequence
-                                        currSeq = seqs{revInds};
-                                        % smELT probes have form
-                                        % A RdoutSeq GeneComplement A
-                                        % Append RdoutSeq to end again
-                                        currSeqSplit = strsplit(currSeq, ' ');
-                                        if headerLengthCorrectForsmELT
-                                            currSeqSplit{end + 1} = currSeqSplit{2};
-                                        end
-                                        seqs{revInds} = strjoin(currSeqSplit, ' ');
-
+                                    headerLengthCorrectForsmELT = false;
+                                    % Update header
+                                    currHeader = headers{revInds};
+                                    currHeadSplit = strsplit(currHeader, ' ');
+                                    currHeadSplit(cell2mat(cellfun(@isempty, currHeadSplit, 'UniformOutput', false))) = [];
+                                    % Only apply doubleHeaded to smELT
+                                    % probes.  These have header form
+                                    % libraryName Readout Gene_ID_XX__XX__XX
+                                    % Append another Readout to end
+                                    if length(currHeadSplit) == 3 % is right length for smELT (MERFISH has 5 components)
+                                        headerLengthCorrectForsmELT = true;
+                                        currHeadSplit{end+1} = currHeadSplit{2};
                                     end
+                                    headers{revInds} = strjoin(currHeadSplit, ' ');
 
+                                    % Update sequence
+                                    currSeq = seqs{revInds};
+                                    % smELT probes have form
+                                    % A RdoutSeq GeneComplement A
+                                    % Append RdoutSeq to end again
+                                    currSeqSplit = strsplit(currSeq, ' ');
+                                    if headerLengthCorrectForsmELT
+                                        currSeqSplit{end + 1} = currSeqSplit{2};
+                                    end
+                                    seqs{revInds} = strjoin(currSeqSplit, ' ');
 
-                                    possibleReadouts = [possibleReadouts, possibleReadouts];
                                 end
+
+
+                                possibleReadouts = [possibleReadouts, possibleReadouts];
                             end
                         end
 
@@ -1324,6 +1343,10 @@ function MERFISHProbeDesign(varargin)
         end
 
         %% Design primers -- removing those that have homology to the probes designed above
+        
+        % If design primers de novo
+        if ~isPredesignedPrimer
+        
         display('Designing primers!');
         fprintf(logFID, '%s - Designing primers for %s\n', datestr(datetime), libraryName);
 
@@ -1372,6 +1395,18 @@ function MERFISHProbeDesign(varargin)
             fprintf(logFID, '%s - Found existing primers file. Exiting.\n', datestr(datetime));
             error('Found existing primers!');
         end
+        
+        % If use predesigned primers from file
+        else
+            fwd_primers = fastaread(fwdPrimerPath);
+            rev_primers = fastaread(revPrimerPath);
+            used_primers = [fwd_primers(primerID(1)); rev_primers(primerID(2))];
+            
+            fastawrite(primersPath, used_primers);
+            fprintf(logFID, '%s - Saving primers to %s from No. %d of %s and No. %d of %s\n',...
+                datestr(datetime), primersPath,...
+                primerID(1), fwdPrimerPath, primerID(2), revPrimerPath);
+        end
 
         %% Add primers to the possible encoding probes designed above to generate template molecules
         primers = fastaread(primersPath);
@@ -1383,8 +1418,15 @@ function MERFISHProbeDesign(varargin)
         fprintf(logFID, '%s - Concatenating primers to probes.\n', datestr(datetime));
         
         if ~exist(finalPrimersPath)
+            
             % Record the used primers
-            fastawrite(finalPrimersPath, usedPrimers);
+            if ~isPredesignedPrimer
+                fastawrite(finalPrimersPath, usedPrimers);
+            else
+                rev_primers = fastaread(revT7PrimerPath);
+                fastawrite(finalPrimersPath, [usedPrimers(1); rev_primers(primerID(2))]);
+            end
+            
             display(['Wrote: ' finalPrimersPath]);
 
             fprintf(logFID, '%s - Wrote primers to %s.\n', datestr(datetime), finalPrimersPath);
