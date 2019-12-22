@@ -201,7 +201,7 @@ class Codebook(object):
         
     def _assign_smELT(self):
         # Create a new column by copying
-        is_smELT = self.gene_list['is_force_smELT']
+        is_smELT = self.gene_list['is_force_smELT'].copy()
         
         # Assign genes that are expressed above a given value to smELT
         is_smELT[self.gene_list['abundance'] >= self.bulk_seq_cutoff] = 1

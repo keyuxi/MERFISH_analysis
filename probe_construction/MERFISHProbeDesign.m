@@ -1162,7 +1162,7 @@ function MERFISHProbeDesign(varargin)
                                         localReadouts(3).Header];
 
                                     % Create sequence
-                                    seqs{p} = [' ' seqrcomplement(localReadouts(1).Sequence) ' A '...
+                                    seqs{p} = [seqrcomplement(localReadouts(1).Sequence) ' A '...
                                             seqrcomplement(tRegion.sequence{nR}) ' A ' ...
                                             seqrcomplement(localReadouts(2).Sequence) ' ' ...
                                             seqrcomplement(localReadouts(3).Sequence)];
@@ -1181,7 +1181,7 @@ function MERFISHProbeDesign(varargin)
                                         localReadouts(3).Header];
 
                                     % Create sequence
-                                    seqs{p} = [' ' seqrcomplement(localReadouts(1).Sequence) ' ' ...
+                                    seqs{p} = [seqrcomplement(localReadouts(1).Sequence) ' ' ...
                                         seqrcomplement(localReadouts(2).Sequence) ' A ' ...
                                         seqrcomplement(tRegion.sequence{nR}) ' A ' ...
                                            seqrcomplement(localReadouts(3).Sequence)];
@@ -1555,14 +1555,14 @@ function badFilesFound = filePathCheck(pathsToCheck)
             switch pathsToCheck{k, 2}
                 % File NOT found at path
                 case 'load'
-                    fprintf(1, 'File not %s found.\nWill generate new file.\n', pathsToCheck{k, 1})
+                    fprintf(1, 'File %s not found.\nWill generate new file.\n', pathsToCheck{k, 1})
                 case 'crashIfNone'
-                    fprintf(1, 'Warning! File not %s found!\nCheck path and re-run!\n', pathsToCheck{k, 1})
+                    fprintf(1, 'Warning! File %s not found!\nCheck path and re-run!\n', pathsToCheck{k, 1})
                     badFilesFound = true;
                 case 'delete'
-                    fprintf(1, 'File not %s found.\nWill generate new file.\n', pathsToCheck{k, 1})
+                    fprintf(1, 'File %s not found.\nWill generate new file.\n', pathsToCheck{k, 1})
                 case 'crashIfPresent'
-                    fprintf(1, 'File not %s found.\nProceeding.\n', pathsToCheck{k, 1})
+                    fprintf(1, 'File %s not found.\nProceeding.\n', pathsToCheck{k, 1})
             end
         end
     end
