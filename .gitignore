@@ -18,3 +18,5 @@
 !/codebook_construction/RevPrimers.fasta
 !/codebook_construction/RevPrimersT7.fasta
 !/codebook_construction/E-MTAB-6798-query-results.tpms.tsv
+## examples
+!/codebook_construction/gene_list_example.csv

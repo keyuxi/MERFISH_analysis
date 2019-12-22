@@ -1,3 +1,26 @@
+# Codebook construction
+
+## Dependencies
+
+See `requirements.txt`.
+
+## Example and key attributes
+
+Example of using the `Codebook` class:
+
+```python
+gene_list_file = r".\gene_list_example.tsv"
+bulk_seq_file = r".\E-MTAB-6798-query-results.tpms.tsv"
+codebook_merfish = Codebook(gene_list_file, "lib01_merfish",bulk_seq_file=bulk_seq_file, verbose=False)
+
+codebook_merfish.generate()
+```
+
+- `gene_list_file` is a tsv file with columns:
+  - `mgi_symbol`: MGI symbols of the gene names. Will be checked by the script. If not the standard MGI symbol, manually confirm and change to the desired gene to avoid confusion.
+  - `is_forced_smELT`: 0/1 logical, specify which genes are singled out for sequential barcodes.
+- `bulk_seq_file` contains tpm abundance information for the genes. The script is temporarily hard-coded to read expression level at the adult forebrain. Genes with abundance >= `bulk_seq_cutoff` will be s
+
 ## Template sequence files
 
 ### AllReadouts.fasta

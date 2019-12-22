@@ -1,3 +1,66 @@
+[TOC]
+
+# Schnitzer Lab
+
+This repository is forked from the AIBS fork, used for multiplexed smFISH probe library construction in Schnitzer Lab, Stanford University. 
+
+## Key edits
+
+- Added Python code for codebook construction.
+  - See `.\codebook_construction` folder.
+  - Takes a csv file of MGI symbols (gene names), queries Ensembl IDs, finds principal transcripts, allocates high expression genes to non-barcoded sequential part (i.e. smELT), and assigns barcodes.
+- Added `tripleHeadedsmELT` option for constant oligo lengths across the library.
+- Support using predesigned primers loaded from file.
+- Rearranged 'A' spacer format, so that the two spacers flank the targeting region.
+- Bug fix to remove excess empty rows from `allOligos`.
+
+## Codebook construction
+
+Dependencies: see `requirements.txt`.
+
+Example of using the `Codebook` class:
+
+```python
+gene_list_file = r".\gene_list_example.tsv"
+bulk_seq_file = r".\E-MTAB-6798-query-results.tpms.tsv"
+codebook_merfish = Codebook(gene_list_file, "lib01_merfish",bulk_seq_file=bulk_seq_file, verbose=False)
+
+codebook_merfish.generate()
+```
+
+- `gene_list_file` is a tsv file with columns:
+  - `mgi_symbol`: MGI symbols of the gene names. Will be checked by the script. If not the standard MGI symbol, manually confirm and change to the desired gene to avoid confusion.
+  - `is_forced_smELT`: 0/1 logical, specify which genes are singled out for sequential barcodes.
+- `bulk_seq_file` contains tpm abundance information for the genes. The script is temporarily hard-coded to read expression level at the adult forebrain. Genes with abundance >= `bulk_seq_cutoff` will be sequentially barcoded.
+- `readout_offset` sets how many readouts to skip.
+
+## probeDesign
+
+Modifications to the `probeDesign.m` class. See `.\probe_construction\executeProbeDesignYuxi.m` for examples.
+
+New attributes:
+
+```matlab
+tripleHeadedsmELT % logical. Default false. When true, all probes have 3 readout parts concatenated. If 1-hot, append 3 identical readouts; if 2-hot, the 3 parts are drawn from 3 coin tosses.
+
+%% Allow predesigned primers from file
+isPredesignedPrimer logical = false;
+primerID = [1 1]; % ID of the [fwd rev] primers. Here, the first fwd and first rev primers from the files are used.
+fwdPrimerPath
+revPrimerPath
+revT7PrimerPath % File containing rev primers with T7 promoter sequence for actual amplification use.
+```
+
+## Questions
+
+Contact Yuxi Ke (kyx at stanford.edu) for questions.
+
+------
+
+README from the AIBS fork continues below:
+
+# AIBS
+
 AIBS fork of code with modifications to support robust design of MERFISH probes. 
 Forked by Rusty Nicovich 4/18.  Continued edits to support sequential probes, mouse transcriptome sense, logging, and object-oriented execution.
 
@@ -50,7 +113,6 @@ Proxy bulk sequencing file (created with ./MERFISH_anlaysis/MERFISH_Examples2/li
 
 Requires all sub-folders of this repo be on MATLAB path to execute.
 
-
 -------------------------------------------------------------------------------------------
 
 Most straightforward execution is to collect variables into probeDesign object and then call probeDesign.buildLibrary() method. 
@@ -62,7 +124,7 @@ pd = probeDesign('hypothalamusLibrary', 'mouse', codebookPath);
 set(pd, 'regionGC', [0.43, 0.63], 'regionTm', [66,76], 'isoSpecificity', [0.75, 1], 'specificity', [0.75, 1]);
 set(pd, 'FPKMabundanceThreshold', 0, 'numProbesPerGene', 92);
 pd.buildLibrary();
-```	
+```
 Or:
 ```
 % Initialize empty probe design object
@@ -167,7 +229,8 @@ Defaults in GitHub repo code:
 
 Original README continues below:
 
-# MERFISH_analysis
+# Zhuang Lab MERFISH_analysis
+
 This project contains a series of matlab functions for the analysis of MERFISH as described 
 in the publication [*Spatially resolved, highly multiplexed RNA profiling in single cells*](http://www.ncbi.nlm.nih.gov/pubmed/25858977) 
 as well as the publication [*High-throughput single-cell gene-expression profiling with multiplexed error-robust fluorescence in situ hybridization*](https://www.ncbi.nlm.nih.gov/pubmed/27625426).
@@ -175,6 +238,7 @@ as well as the publication [*High-throughput single-cell gene-expression profili
 Example data and analysis results can be downloaded from the [MERFISH page](http://zhuang.harvard.edu/merfish/). 
 
 ## License Information
+
 This software is provided for use to the academic community free of charge. 
 
 Details concerning the licensing of this software for commercial purposes can be found in the license.pdf file. 
@@ -212,4 +276,5 @@ The functions and example scripts associated with the older pipeline are still a
 The functions and example scripts associated with older pipelines can be found in folders named 'deprecated'.
 
 ## Questions
+
 Contact Xiaowei Zhuang (zhuang at chemistry.harvard.edu) or Jeffrey Moffitt (lmoffitt at mcb.harvard.edu).

@@ -197,8 +197,11 @@ class Codebook(object):
         # Map to Ensembl gene ID, add to the attribute
         self.gene_list['abundance'] = 0
         for ind,row in self.gene_list.iterrows():
-            self.gene_list.at[ind, 'abundance'] = abundance[abundance['Gene ID'] == row['ensembl_gene_id']]['tpm'].values[0]
-        
+            try:
+                self.gene_list.at[ind, 'abundance'] = abundance[abundance['Gene ID'] == row['ensembl_gene_id']]['tpm'].values[0]
+            except:
+                self.gene_list.at[ind, 'abundance'] = 1
+                
     def _assign_smELT(self):
         # Create a new column by copying
         is_smELT = self.gene_list['is_force_smELT'].copy()
@@ -362,11 +365,17 @@ class Codebook2hot(Codebook):
 
 
 if __name__ == "__main__":
-    gene_list_file = r".\lib01_merfish.txt"
+#    gene_list_file = r".\lib01_merfish.txt"
+#    bulk_seq_file = r".\E-MTAB-6798-query-results.tpms.tsv"
+#    codebook_merfish = Codebook(gene_list_file, "lib01_merfish", bulk_seq_file=bulk_seq_file, verbose=False)
+#    codebook_merfish.generate()
+#
+#    gene_list_file = r".\lib01_2hot.txt"
+#    codebook_2hot = Codebook2hot(gene_list_file, "lib01_2hot", readout_offset=25, verbose=False)
+#    codebook_2hot.generate()
+    
+    gene_list_file = r".\gene_list_example.tsv"
     bulk_seq_file = r".\E-MTAB-6798-query-results.tpms.tsv"
-    codebook_merfish = Codebook(gene_list_file, "lib01_merfish", bulk_seq_file=bulk_seq_file, verbose=False)
-    codebook_merfish.generate()
+    codebook_merfish = Codebook(gene_list_file, "lib01_merfish",bulk_seq_file=bulk_seq_file, verbose=False)
 
-    gene_list_file = r".\lib01_2hot.txt"
-    codebook_2hot = Codebook2hot(gene_list_file, "lib01_2hot", readout_offset=25, verbose=False)
-    codebook_2hot.generate()
+    codebook_merfish.generate()
