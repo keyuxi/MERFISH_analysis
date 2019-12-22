@@ -3,6 +3,8 @@
 Created on Thu Dec 12 13:27:36 2019
 
 @author: Yuxi
+Mark Schnitzer Lab, Stanford University
+kyx@stanford.edu
 """
 
 import pybiomart as bm
@@ -376,6 +378,6 @@ if __name__ == "__main__":
     
     gene_list_file = r".\gene_list_example.tsv"
     bulk_seq_file = r".\E-MTAB-6798-query-results.tpms.tsv"
-    codebook_merfish = Codebook(gene_list_file, "lib01_merfish",bulk_seq_file=bulk_seq_file, verbose=False)
+    codebook_merfish = Codebook(gene_list_file, "lib_example",bulk_seq_file=bulk_seq_file, verbose=False)
 
     codebook_merfish.generate()
