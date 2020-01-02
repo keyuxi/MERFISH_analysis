@@ -13,6 +13,24 @@ import numpy as np
 import requests, sys
 import csv
 
+def fastaread(fn):
+    """
+    Parses fasta file to header and seq.
+    Returns:
+        header - list
+        seq - list
+    """
+    header,seq = [], []
+    
+    with open(fn, 'r') as infile:
+        for line in infile:
+            if line.strip().startswith('>'):
+                header.append(line.strip()[1:])
+            elif line.strip():
+                seq.append(line.strip())
+    
+    return header, seq                
+
 class Codebook(object):
     def __init__(self, gene_list_file, codebook_name='merfish', version='1.0',
                  readout_file=r".\AllReadouts.fasta", readout_offset=0,
@@ -28,13 +46,12 @@ class Codebook(object):
         # Readout file to determine bit names
         self.n_bit = 0
         self.bit_names = []
-
-        with open(readout_file, 'r') as infile:
-            for line in infile:
-                if line.strip().startswith('>'):
-                    self.bit_names.append(line.strip()[1:])
-        self.bit_names = self.bit_names[readout_offset:]
+        self.readout_file = readout_file
+        self.readout_offset = readout_offset
         
+        # Used readouts file
+        self.used_readouts_file = r".\used_readouts_" + self.codebook_name + ".fasta"
+
         # Abundance information to assign smELT
         self.bulk_seq_file = bulk_seq_file
         self.bulk_seq_cutoff = bulk_seq_cutoff
@@ -53,6 +70,8 @@ class Codebook(object):
         """
         Call everything and write to out_file.
         """
+        self._set_readouts()
+
         self._get_ensembl_id()
         self._get_attributes()
         if not (self.bulk_seq_file == None):
@@ -62,9 +81,21 @@ class Codebook(object):
 
         self._assign_smELT()
         codebook_df = self._assign_barcode()
-        
-        self._write_codebook_csv(codebook_df, out_file)
 
+        self._write_codebook_csv(codebook_df, out_file)
+        self._write_used_readouts()
+
+    def _set_readouts(self):
+        """
+        Read readout names and truncate the offset.
+        """
+        with open(self.readout_file, 'r') as infile:
+            for line in infile:
+                if line.strip().startswith('>'):
+                    self.bit_names.append(line.strip()[1:])
+                    
+        self.bit_names = self.bit_names[self.readout_offset:]
+        
     def _get_ensembl_id(self):
         """
         Convert gene names to ensembl gene id using the REST API.
@@ -301,6 +332,19 @@ class Codebook(object):
                 
         if self.verbose:
             print('\nFinished writing codebook to %s.\n' % out_file)
+            
+    def _write_used_readouts(self):
+        """
+        Write readouts in self.bit_names to a fasta file self.used_readouts_file
+        """
+        header,seq = fastaread(self.readout_file)
+        with open(self.used_readouts_file, 'w') as u_rd:
+            for bitname in self.bit_names:
+                for i,h in enumerate(header):
+                    if h == bitname:
+                        u_rd.write('>%s\n%s\n' % (h, seq[i]))
+                        break
+            
         
     def _appris2rank(self, anno):
         """
@@ -367,17 +411,17 @@ class Codebook2hot(Codebook):
 
 
 if __name__ == "__main__":
-#    gene_list_file = r".\lib01_merfish.txt"
-#    bulk_seq_file = r".\E-MTAB-6798-query-results.tpms.tsv"
-#    codebook_merfish = Codebook(gene_list_file, "lib01_merfish", bulk_seq_file=bulk_seq_file, verbose=False)
-#    codebook_merfish.generate()
-#
-#    gene_list_file = r".\lib01_2hot.txt"
-#    codebook_2hot = Codebook2hot(gene_list_file, "lib01_2hot", readout_offset=25, verbose=False)
-#    codebook_2hot.generate()
-    
-    gene_list_file = r".\gene_list_example.tsv"
+    gene_list_file = r".\lib01_merfish.txt"
     bulk_seq_file = r".\E-MTAB-6798-query-results.tpms.tsv"
-    codebook_merfish = Codebook(gene_list_file, "lib_example",bulk_seq_file=bulk_seq_file, verbose=False)
-
+    codebook_merfish = Codebook(gene_list_file, "lib01_merfish", bulk_seq_file=bulk_seq_file, bulk_seq_cutoff=400, verbose=False)
     codebook_merfish.generate()
+
+    gene_list_file = r".\lib01_2hot.txt"
+    codebook_2hot = Codebook2hot(gene_list_file, "lib01_2hot", readout_offset=27, verbose=False)
+    codebook_2hot.generate()
+    
+#    gene_list_file = r".\gene_list_example.tsv"
+#    bulk_seq_file = r".\E-MTAB-6798-query-results.tpms.tsv"
+#    codebook_merfish = Codebook(gene_list_file, "lib_example",bulk_seq_file=bulk_seq_file, verbose=False)
+#
+#    codebook_merfish.generate()
