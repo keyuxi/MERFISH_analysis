@@ -34,6 +34,7 @@ def fastaread(fn):
 class Codebook(object):
     def __init__(self, gene_list_file, codebook_name='merfish', version='1.0',
                  readout_file=r".\AllReadouts.fasta", readout_offset=0,
+                 transcript_len_cutoff=1500,
                  bulk_seq_file=None, bulk_seq_cutoff=500,
                  code_file=None, is_shuffle_code=True, verbose=True):
         
@@ -51,7 +52,10 @@ class Codebook(object):
         
         # Used readouts file
         self.used_readouts_file = r".\used_readouts_" + self.codebook_name + ".fasta"
-
+        
+        # Transcript length cutoff to assign smELT
+        self.transcript_len_cutoff = transcript_len_cutoff
+        
         # Abundance information to assign smELT
         self.bulk_seq_file = bulk_seq_file
         self.bulk_seq_cutoff = bulk_seq_cutoff
@@ -241,8 +245,12 @@ class Codebook(object):
         
         # Assign genes that are expressed above a given value to smELT
         is_smELT[self.gene_list['abundance'] >= self.bulk_seq_cutoff] = 1
+        
+        # Assign genes that are too short to smELT
+        is_smELT[self.gene_list['transcript_length'] <= self.transcript_len_cutoff] = 1
+        
         self.gene_list['is_smELT'] = is_smELT
-        print(self.gene_list[['mgi_symbol', 'ensembl_gene_id', 'abundance', 'is_smELT']])
+        print(self.gene_list[['mgi_symbol', 'ensembl_gene_id', 'transcript_length', 'abundance', 'is_smELT']])
         
     def _assign_barcode(self):
         """
@@ -367,7 +375,7 @@ class Codebook(object):
 class Codebook2hot(Codebook):
     def _assign_barcode(self):
         """
-        Assign 2-hot barcodes neglecting is_smELT. Sort genes.
+        Assign 2-hot barcodes neglecting is_smELT. Does **not** sort genes alphabetically.
         Returns:
             out_list - a dataframe with gene symbols, transcript_id and barcode
         """
@@ -377,8 +385,8 @@ class Codebook2hot(Codebook):
         #####################################################
         
         # Barcoded genes
-        # Sort gene names alphabetically to dataframe out_list
-        out_list = self.gene_list.sort_values('mgi_symbol') \
+        # Not Sort gene names alphabetically to dataframe out_list
+        out_list = self.gene_list \
                         [['mgi_symbol','ensembl_transcript_id_version']]
         # Check gene number
         n_barcoded_gene = len(out_list)
@@ -409,16 +417,67 @@ class Codebook2hot(Codebook):
 
         return out_list
 
+class Codebook1hot(Codebook):
+    def _assign_barcode(self):
+        """
+        Assign 1-hot barcodes neglecting is_smELT. Does **not** sort genes.
+        Returns:
+            out_list - a dataframe with gene symbols, transcript_id and barcode
+        """
+        
+        #####################################################
+        ##### Generate sorted gene list for the codebook ####
+        #####################################################
+        
+        # Barcoded genes
+        # Not Sort gene names alphabetically to dataframe out_list
+        out_list = self.gene_list \
+                        [['mgi_symbol','ensembl_transcript_id_version']]
+        # Check gene number
+        n_barcoded_gene = len(out_list)
+        print('\nNumber of barcoded genes: %s.\n' % n_barcoded_gene)
+        if n_barcoded_gene > 100:
+            print('Too many barcoded genes!')
+                
+        # Generate 1-hot code as np.array
+        barcode = np.eye(n_barcoded_gene, dtype=int)
+
+        # Assembly barcode - a list
+        barcode = barcode.astype(str).tolist()
+        barcode = [''.join(row) for row in barcode]
+
+        #####################################################
+        ################# Assign all barcodes ###############
+        #####################################################
+                  
+        # Truncate bit_names to the proper length
+        self.bit_names = self.bit_names[:len(barcode[0])]
+        
+        # Add barcode to out_list
+        out_list['barcode'] = barcode
+        
+        # Rename columns to match the final format
+        out_list.columns = ['name', 'id', 'barcode']
+
+        return out_list
 
 if __name__ == "__main__":
-    gene_list_file = r".\lib01_merfish.txt"
+    gene_list_file = r".\lib01_merfish_0306.txt"
     bulk_seq_file = r".\E-MTAB-6798-query-results.tpms.tsv"
-    codebook_merfish = Codebook(gene_list_file, "lib01_merfish", bulk_seq_file=bulk_seq_file, bulk_seq_cutoff=400, verbose=False)
+    codebook_merfish = Codebook(gene_list_file, "lib01_merfish_0306", readout_offset=0, bulk_seq_file=bulk_seq_file, transcript_len_cutoff=1200, bulk_seq_cutoff=400, verbose=True)
     codebook_merfish.generate()
 
-    gene_list_file = r".\lib01_2hot.txt"
-    codebook_2hot = Codebook2hot(gene_list_file, "lib01_2hot", readout_offset=27, verbose=False)
-    codebook_2hot.generate()
+    gene_list_file = r".\lib01_EI_0306.txt"
+    codebook_EI = Codebook2hot(gene_list_file, "lib01_EI_0306", readout_offset=32, verbose=False)
+    codebook_EI.generate()
+
+    gene_list_file = r".\lib01_valance_0306.txt"
+    codebook_2hot = Codebook2hot(gene_list_file, "lib01_valence_0306", readout_offset=36, verbose=False)
+    codebook_2hot.generate()   
+    
+    gene_list_file = r".\lib01_seq_0306.txt"
+    codebook_seq = Codebook1hot(gene_list_file, "lib01_seq_0306", readout_offset=40, verbose=True)
+    codebook_seq.generate()
     
 #    gene_list_file = r".\gene_list_example.tsv"
 #    bulk_seq_file = r".\E-MTAB-6798-query-results.tpms.tsv"
