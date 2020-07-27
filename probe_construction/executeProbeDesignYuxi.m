@@ -25,13 +25,13 @@ lib_name = 'lib01_EI_0306';
 addpath(genpath('C:\Users\Yuxi\workspace\MERFISH_analysis'));
 addpath(genpath('C:\Users\Yuxi\workspace\genomeData'));
 
-codebookPath = 'C:\Users\Yuxi\workspace\MERFISH_analysis\codebook_construction\codebook_Musmusculus_lib01_EI_0306_v1.0.csv';
+codebookPath = 'C:\Users\Yuxi\workspace\MERFISH_analysis\codebook_construction\codebook_Musmusculus_lib_example_v1.0.csv';
 pd = probeDesign(lib_name, 'mouse', codebookPath);
 
 set(pd, 'MERFISHAnalysisPath', 'C:\Users\Yuxi\workspace\genomeData');
 set(pd, 'basePath', 'C:\Users\Yuxi\workspace\genomeData');
 set(pd, 'fpkmPath', 'Mus_musculus_proxy.fpkm_tracking');
-set(pd, 'readoutPath', ['C:\Users\Yuxi\workspace\MERFISH_analysis\codebook_construction\used_readouts_' lib_name '.fasta']);
+set(pd, 'readoutPath', ['C:\Users\Yuxi\workspace\genomeDatalib01_EI_0306\lib01_EI_0306_used_readouts.fasta']);
 
 set(pd, 'regionGC', [0.43, 0.63], 'regionTm', [66,76], 'isoSpecificity', [0, 1], 'specificity', [0.75, 1]);
 set(pd, 'FPKMabundanceThreshold', 0, 'numProbesPerGene', 86);

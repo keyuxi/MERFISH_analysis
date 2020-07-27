@@ -31,6 +31,8 @@ classdef probeDesign < matlab.mixin.SetGet
         useUniformWeights {mustBeNumericOrLogical} = true;
         isoSpecificityTable_lengthOfExactHomology {mustBeNumeric, mustBeNonnegative} = 17;
 
+        splitType char = 'conventional'; % 'split' or 'conventional'+2----------------------------------------
+        
         regionLength {mustBeNumeric} = 30; % length of region (nt)
         regionGC = [0, 1]; % Fractional content
         regionTm = [70, 100]; % deg C

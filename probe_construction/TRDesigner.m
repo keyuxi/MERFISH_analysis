@@ -804,6 +804,7 @@ methods
         defaults(end+1,:) = {'GC', 'positive', []};
         defaults(end+1,:) = {'specificity', 'positive', []};
         defaults(end+1,:) = {'isoSpecificity', 'positive', []}; 
+        defaults(end+1,:) = {'splitType', 'char', 'conventional'};
         defaults(end+1,:) = {'monovalentSalt', 'positive', 0.3};
         defaults(end+1,:) = {'probeConc', 'positive', 5e-9};
         defaults(end+1,:) = {'OTTables', 'cell', {}};
@@ -1031,8 +1032,13 @@ methods
             end
             
             % Tile regions and return properties of selected regions
-            selectedRegionProps = TRDesigner.TileRegions(regionProps, ...
-                threePrimeSpace);
+            if strcmp(parameters.splitType, 'conventional')
+                selectedRegionProps = TRDesigner.TileRegions(regionProps, ...
+                    threePrimeSpace);
+            elseif strcmp(parameters.splitType, 'split')
+                selectedRegionProps = TRDesigner.TileSplitRegions(regionProps, ...
+                    threePrimeSpace); 
+            end
             
             % Build a new target region object
             newTR = TargetRegions('id', ids{i}, ...
@@ -1283,6 +1289,13 @@ methods (Static)
         % Identify a non-overlapping tiling of regions separated by at
         % least padLength
         % selectedRegionData = TRDesigner.TileRegions(regionProps, padLength)
+        % Args:
+        %    regionProps - (6,n) array. 
+        %       (1,:) start positions, (2,:) region
+        %       length, (3,:) Tm, (4,:) GC, (5,:) specificity, (6,:)
+        %       isospecificity
+        
+
         
         % -------------------------------------------------------------------------
         % Handle empty
@@ -1322,6 +1335,75 @@ methods (Static)
         % -------------------------------------------------------------------------
         selectedRegionData = regionProps(:,indsToKeep);
     end
+    
+    function selectedRegionData = TileSplitRegions(regionProps, padLength)
+    % Identify a non-overlapping tiling of paired split regions 2 nt apart 
+    % separated by at least padLength
+    % selectedRegionData = TRDesigner.TileRegions(regionProps, padLength)
+    % Args:
+    %    regionProps - (6,n) array. 
+    %       (1,:) start positions, (2,:) region
+    %       length, (3,:) Tm, (4,:) GC, (5,:) specificity, (6,:)
+    %       isospecificity
+    gapLength = 2;
+    % -------------------------------------------------------------------------
+    % Handle empty
+    % -------------------------------------------------------------------------
+    if isempty(regionProps)
+        selectedRegionData = regionProps;
+        return;
+    end
+
+    % -------------------------------------------------------------------------
+    % Find start positions, sort
+    % -------------------------------------------------------------------------
+    startPos = regionProps(1,:);
+    [startPos, sind] = sort(startPos);
+    regionProps = regionProps(:,sind); % Sort data
+
+    % -------------------------------------------------------------------------
+    % Find allPossibleIndPairs
+    % -------------------------------------------------------------------------
+    allPossibleIndPairs = zeros(0,2);
+    % Expected 3' side region startPos
+    pairMatePos = startPos + regionProps(2,:) + gapLength;
+    % Find all eligible pairs
+    for i = 1:length(pairMatePos)
+        pair3PInd = find(startPos == pairMatePos(i), 1);
+        if ~isempty(pair3PInd)
+            allPossibleIndPairs(end+1,:) = [i, pair3PInd];
+        end
+    end
+    
+    % -------------------------------------------------------------------------
+    % Find nextAvailablePos for each pair
+    % -------------------------------------------------------------------------
+    nextAvailablePos = startPos(allPossibleIndPairs(:,1)) + regionProps(2,allPossibleIndPairs(:,1)) +...
+        gapLength + regionProps(2, allPossibleIndPairs(:,2)) + padLength;
+
+    % -------------------------------------------------------------------------
+    % Tile probes
+    % -------------------------------------------------------------------------
+    done = false;
+    indsOfIndsToKeep = 1;%allPossibleIndPairs(1,:);
+    while ~done
+        minNextPos = nextAvailablePos(indsOfIndsToKeep(end,1)); % Identify the minimum starting position
+        newInd = find(startPos(allPossibleIndPairs(:,1)) >= minNextPos, 1);
+        if isempty(newInd)
+            done = true;
+        else
+            indsOfIndsToKeep(end+1,:) = newInd;
+        end
+    end
+    % convert indsOfIndsToKeep to IndsToKeep
+    indsToKeep = allPossibleIndPairs(indsOfIndsToKeep,:);
+    indsToKeep = sort(indsToKeep(:));
+
+    % -------------------------------------------------------------------------
+    % Return probe data
+    % -------------------------------------------------------------------------
+    selectedRegionData = regionProps(:,indsToKeep);
+end
         
     
 end % Static methods
