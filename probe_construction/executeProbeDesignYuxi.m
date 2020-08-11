@@ -1,90 +1,15 @@
-%% lib01_merfish
 clear;clc;
 addpath(genpath('C:\Users\Yuxi\workspace\MERFISH_analysis'))
 
-lib_name = 'lib01_merfish_0306';
-codebookPath = 'C:\Users\Yuxi\workspace\MERFISH_analysis\codebook_construction\codebook_Musmusculus_lib01_merfish_0306_v1.0.csv';
-pd = probeDesign(lib_name, 'mouse', codebookPath);
+%% lib01_merfish
 
-set(pd, 'MERFISHAnalysisPath', 'C:\Users\Yuxi\workspace\genomeData');
-set(pd, 'basePath', 'C:\Users\Yuxi\workspace\genomeData');
-set(pd, 'fpkmPath', 'Mus_musculus_proxy.fpkm_tracking');
-set(pd, 'readoutPath', ['C:\Users\Yuxi\workspace\MERFISH_analysis\codebook_construction\used_readouts_' lib_name '.fasta']);
+% designCodebook('mer', 'conventional');
+% designCodebook('trihead', 'conventional');
+%designCodebook('opioid', 'conventional');
+%clear;clc;
+designCodebook('split', 'split');
 
-set(pd, 'regionGC', [0.43, 0.63], 'regionTm', [66,76], 'isoSpecificity', [0, 1], 'specificity', [0.75, 1]);
-set(pd, 'FPKMabundanceThreshold', 0, 'numProbesPerGene', 86);
-set(pd, 'probeSpacing', -20, 'tripleHeadedsmELT', true);
-
-set(pd, 'isPredesignedPrimer', true, 'primerID', [1 1]);
-
-pd.buildLibrary();
-
-%% lib01_EI
-clear;clc;
-lib_name = 'lib01_EI_0306';
-addpath(genpath('C:\Users\Yuxi\workspace\MERFISH_analysis'));
-addpath(genpath('C:\Users\Yuxi\workspace\genomeData'));
-
-codebookPath = 'C:\Users\Yuxi\workspace\MERFISH_analysis\codebook_construction\codebook_Musmusculus_lib_example_v1.0.csv';
-pd = probeDesign(lib_name, 'mouse', codebookPath);
-
-set(pd, 'MERFISHAnalysisPath', 'C:\Users\Yuxi\workspace\genomeData');
-set(pd, 'basePath', 'C:\Users\Yuxi\workspace\genomeData');
-set(pd, 'fpkmPath', 'Mus_musculus_proxy.fpkm_tracking');
-set(pd, 'readoutPath', ['C:\Users\Yuxi\workspace\genomeDatalib01_EI_0306\lib01_EI_0306_used_readouts.fasta']);
-
-set(pd, 'regionGC', [0.43, 0.63], 'regionTm', [66,76], 'isoSpecificity', [0, 1], 'specificity', [0.75, 1]);
-set(pd, 'FPKMabundanceThreshold', 0, 'numProbesPerGene', 86);
-set(pd, 'probeSpacing', -20, 'tripleHeadedsmELT', true);
-
-set(pd, 'isPredesignedPrimer', true, 'primerID', [3 3]);
-
-pd.buildLibrary();
-
-%% lib01_valance
-clear;clc;
-lib_name = 'lib01_valence_0306';
-addpath(genpath('C:\Users\Yuxi\workspace\MERFISH_analysis'));
-addpath(genpath('C:\Users\Yuxi\workspace\genomeData'));
-
-codebookPath = 'C:\Users\Yuxi\workspace\MERFISH_analysis\codebook_construction\codebook_Musmusculus_lib01_valence_0306_v1.0.csv';
-pd = probeDesign(lib_name, 'mouse', codebookPath);
-
-set(pd, 'MERFISHAnalysisPath', 'C:\Users\Yuxi\workspace\genomeData');
-set(pd, 'basePath', 'C:\Users\Yuxi\workspace\genomeData');
-set(pd, 'fpkmPath', 'Mus_musculus_proxy.fpkm_tracking');
-set(pd, 'readoutPath', ['C:\Users\Yuxi\workspace\MERFISH_analysis\codebook_construction\used_readouts_' lib_name '.fasta']);
-
-set(pd, 'regionGC', [0.43, 0.63], 'regionTm', [66,76], 'isoSpecificity', [0, 1], 'specificity', [0.75, 1]);
-set(pd, 'FPKMabundanceThreshold', 0, 'numProbesPerGene', 86);
-set(pd, 'probeSpacing', -20, 'tripleHeadedsmELT', true);
-
-set(pd, 'isPredesignedPrimer', true, 'primerID', [4 4]);
-
-pd.buildLibrary();
-
-%% lib01_seq
-clear;clc;
-lib_name = 'lib01_seq_0306';
-addpath(genpath('C:\Users\Yuxi\workspace\MERFISH_analysis'));
-addpath(genpath('C:\Users\Yuxi\workspace\genomeData'));
-
-codebookPath = 'C:\Users\Yuxi\workspace\MERFISH_analysis\codebook_construction\codebook_Musmusculus_lib01_seq_0306_v1.0.csv';
-pd = probeDesign(lib_name, 'mouse', codebookPath);
-
-set(pd, 'MERFISHAnalysisPath', 'C:\Users\Yuxi\workspace\genomeData');
-set(pd, 'basePath', 'C:\Users\Yuxi\workspace\genomeData');
-set(pd, 'fpkmPath', 'Mus_musculus_proxy.fpkm_tracking');
-set(pd, 'readoutPath', ['C:\Users\Yuxi\workspace\MERFISH_analysis\codebook_construction\used_readouts_' lib_name '.fasta']);
-
-set(pd, 'regionGC', [0.43, 0.63], 'regionTm', [66,76], 'isoSpecificity', [0, 1], 'specificity', [0.75, 1]);
-set(pd, 'FPKMabundanceThreshold', 0, 'numProbesPerGene', 48);
-set(pd, 'probeSpacing', -20, 'tripleHeadedsmELT', true);
-
-set(pd, 'isPredesignedPrimer', true, 'primerID', [5 5]);
-
-pd.buildLibrary();
-
+%{
 %% Fill into order template
 n_oligos = zeros(7,1);
 oligo_file_nm = {'merfish', 'merfish', 'EI', 'valence', 'seq', 'seq', 'seq'};
@@ -143,6 +68,7 @@ revPrimerT7Path = 'C:\Users\Yuxi\workspace\MERFISH_analysis\codebook_constructio
 revT7 = fastaread(revPrimerT7Path);
 used_primers = reshape([fwd(1:10), revT7(1:10)]', 20, 1);
 fastawrite(primer_out, used_primers);
+%}
 
 function n_oligos = genescript_form_new_primer(fn, out, template, gene_range, primer_id)
 % input: 
@@ -243,5 +169,39 @@ status = copyfile(template, out);
 xlswrite(out, oligos, 'Oligo pool sequence form', 'A3');
 xlswrite(out, length(oligos), 'Quatition request form', 'I14');
 fprintf('#oligos: %d\n', length(oligos));
+
+end
+
+function designCodebook(cbname, splitType)
+    codebookDir = 'C:\Users\Yuxi\workspace\transcriptomic_analysis\codebook\out\';
+
+    codebookPath = fullfile(codebookDir, ['codebook_mm_lib01_' cbname '.csv']);
+    pd = probeDesign(['lib01_' cbname], 'mouse', codebookPath);
+
+    set(pd, 'MERFISHAnalysisPath', 'C:\Users\Yuxi\workspace\probeOutput\lib01_');
+    set(pd, 'basePath', 'C:\Users\Yuxi\workspace\genomeData');
+    set(pd, 'fpkmPath', 'Mus_musculus_proxy.fpkm_tracking');
+    set(pd, 'readoutPath', [codebookDir '\used_readouts_' cbname '.fasta']);
+
+    set(pd, 'FPKMabundanceThreshold', 0);
+    
+    if strcmp(splitType, 'conventional')
+        set(pd, 'probeSpacing', -20, 'tripleHeadedsmELT', true);
+        set(pd, 'forbiddenSeqs', {'AAAA','TTTT','CCCC','GGGG'});
+        set(pd, 'numProbesPerGene', 96);
+        set(pd, 'regionGC', [0.43, 0.63], 'regionTm', [66,76]);
+        set(pd, 'isoSpecificity', [0, 1], 'specificity', [0.75, 1]);
+
+    elseif strcmp(splitType, 'split')
+        set(pd, 'probeSpacing', 0, 'splitType', 'split');
+        set(pd, 'regionLength', 25);
+        set(pd, 'numProbesPerGene', 144);
+        set(pd, 'regionGC', [0.2, 0.8], 'regionTm', [66,76]);
+        set(pd, 'isoSpecificity', [0, 1], 'specificity', [0.2, 1]);
+    end
+
+    %set(pd, 'isPredesignedPrimer', true, 'primerID', [1 1]);
+
+    pd.buildLibrary();
 
 end

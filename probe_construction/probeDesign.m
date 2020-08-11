@@ -31,6 +31,7 @@ classdef probeDesign < matlab.mixin.SetGet
         useUniformWeights {mustBeNumericOrLogical} = true;
         isoSpecificityTable_lengthOfExactHomology {mustBeNumeric, mustBeNonnegative} = 17;
 
+        forbiddenSeqs cell = {'AAAA','TTTT','CCCC','GGGG','GGTACC', 'CCATGG', 'GAATTC', 'CTTAAG'}; % KpnI & EcoRI
         splitType char = 'conventional'; % 'split' or 'conventional'+2----------------------------------------
         
         regionLength {mustBeNumeric} = 30; % length of region (nt)

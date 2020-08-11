@@ -804,7 +804,7 @@ methods
         defaults(end+1,:) = {'GC', 'positive', []};
         defaults(end+1,:) = {'specificity', 'positive', []};
         defaults(end+1,:) = {'isoSpecificity', 'positive', []}; 
-        defaults(end+1,:) = {'splitType', 'char', 'conventional'};
+        defaults(end+1,:) = {'splitType', 'string', 'conventional'};
         defaults(end+1,:) = {'monovalentSalt', 'positive', 0.3};
         defaults(end+1,:) = {'probeConc', 'positive', 5e-9};
         defaults(end+1,:) = {'OTTables', 'cell', {}};
@@ -1038,6 +1038,7 @@ methods
             elseif strcmp(parameters.splitType, 'split')
                 selectedRegionProps = TRDesigner.TileSplitRegions(regionProps, ...
                     threePrimeSpace); 
+                disp('finished calling TileSplitRegions');
             end
             
             % Build a new target region object
@@ -1349,6 +1350,9 @@ methods (Static)
     % -------------------------------------------------------------------------
     % Handle empty
     % -------------------------------------------------------------------------
+    disp('TileSplitRegions called. regionProps size:');
+    disp(size(regionProps));
+    
     if isempty(regionProps)
         selectedRegionData = regionProps;
         return;
@@ -1380,6 +1384,20 @@ methods (Static)
     % -------------------------------------------------------------------------
     nextAvailablePos = startPos(allPossibleIndPairs(:,1)) + regionProps(2,allPossibleIndPairs(:,1)) +...
         gapLength + regionProps(2, allPossibleIndPairs(:,2)) + padLength;
+    fprintf('allPossibleIndPairs:\n');
+    disp(size(allPossibleIndPairs));
+    disp('nextAvailablePos: ');
+    disp(size(nextAvailablePos));
+
+    % -------------------------------------------------------------------------
+    % Handle empty (No possible pair found)
+    % -------------------------------------------------------------------------
+    if isempty(allPossibleIndPairs)
+        selectedRegionData = zeros(6,0);
+        fprintf('No possible split probe designed!\n');
+        return;
+    end
+
 
     % -------------------------------------------------------------------------
     % Tile probes
@@ -1403,6 +1421,7 @@ methods (Static)
     % Return probe data
     % -------------------------------------------------------------------------
     selectedRegionData = regionProps(:,indsToKeep);
+    disp('selectedRegionData:');disp(selectedRegionData);
 end
         
     

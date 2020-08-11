@@ -120,7 +120,7 @@ rmspace = @(x)x(~isspace(x));
 % Switch based on version
 switch header.version
     case {'1.0', '1', '1.1'}
-        codebook = repmat(struct('name', '', 'id', '', 'barcode', ''), [0 1]);
+        codebook = repmat(struct('name', '', 'id', '', 'barcode', 'subpool'), [0 1]);
         
         done = false;
         while ~done
@@ -139,6 +139,9 @@ switch header.version
                 codebook(end+1).name = stringParts{1};
                 codebook(end).id = stringParts{2};
                 codebook(end).barcode = parameters.barcodeConvFunc(rmspace(stringParts{3}));
+                if length(stringParts) == 4
+                    codebook(end).subpool = stringParts{4};
+                end
             catch 
                 fprintf(1, 'Failed on parsing barcode string %s\n', line);
                 assignin('base', 'stringParts', stringParts);
