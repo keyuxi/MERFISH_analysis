@@ -921,7 +921,8 @@ function MERFISHProbeDesign(varargin)
                     'monovalentSalt', regionDesignParameters.monovalentSaltConcentration, ...
                     'probeConc', regionDesignParameters.probeConcentration, ...
                     'threePrimeSpace', regionDesignParameters.probeSpacing, ...
-                    'OTTables', {'rRNA', [0, 0]});
+                    'OTTables', {'rRNA', [0, 0]}, ...
+                    'removeForbiddenSeqs', true);
 
                     % NOTE: The ranges above were determined empirically to strike 
                     % the proper balance between stringency (narrow ranges) and 
@@ -1255,7 +1256,7 @@ function MERFISHProbeDesign(varargin)
                                         % Create sequence
                                         seqs{p} = [...
                                                 'GGTAC ' ... % KpnI
-                                                'C ' seqrcomplement(localReadouts(1).Sequence) ' CCTAT ' ... % bridge
+                                                'C' seqrcomplement(localReadouts(1).Sequence) 'CCTAT ' ... % bridge
                                                 seqrcomplement(tRegion.sequence{nR}) ... % target region
                                                 ' GAATTC']; % EcoRI
                                     end % left or right probe
@@ -1589,6 +1590,8 @@ function MERFISHProbeDesign(varargin)
     end
     
     display('Script completed!');
+    % shut down parallel pool
+    delete(gcp('nocreate'));
     % Return to calling function
     return; 
     %     error('Stop script here!')

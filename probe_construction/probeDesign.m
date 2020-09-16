@@ -319,6 +319,7 @@ classdef probeDesign < matlab.mixin.SetGet
                     returnTest(obj);
                 else
                      MERFISHProbeDesign(obj);
+                     fprintf(1, 'Returned from MERFISHProbeDesign.\n');
                 end
             else
                 fprintf(1, 'Empty parameters in probeDesign object.\n');
